@@ -454,7 +454,7 @@ est.curves.spc <- function(obs.dat.proc, quant.curve.list, max.obs=Inf) {
 		llog.rest.true <- fit.est1$vals/fit.est2$vals*(obs.spc/(obs.spc + fit.est1$vals))
 
 		llog.rest.min <- min(weib.rest.true, llog.rest.true) #mdl2
-		llog.rest.avg <- min(llog.rest.true, mean(c(weib.rest.true, llog.rest.true)))
+		#llog.rest.avg <- min(llog.rest.true, mean(c(weib.rest.true, llog.rest.true)))
 
 		weib.rat <- (fit.est1$vals/(obs.spc + fit.est1$vals))
 		llog.rat <- (obs.spc/(obs.spc + fit.est1$vals))
@@ -465,7 +465,7 @@ est.curves.spc <- function(obs.dat.proc, quant.curve.list, max.obs=Inf) {
 		weib.rat <- mean(c(weib.rat, weib.rat2))
 		llog.rat <- mean(c(llog.rat, llog.rat2))
 
-		ubs.mod3.sel <- c(max(c(weib.rat, llog.rat)), llog.rest.avg, weib.rest.true)
+		ubs.mod3.sel <- c(max(c(weib.rat, llog.rat)), llog.rest.min, weib.rest.true)
 		ubs.mod3.sel[1] <- max(c(ubs.mod3.sel[1], 1 - sum(ubs.mod3.sel[c(2, 3)]) + 1e-6))
 		ubs.mod3.sel <- ifelse(ubs.mod3.sel > 1, 1, ubs.mod3.sel)
 		ubs.mod3.sel <- ifelse(ubs.mod3.sel < 0, 0, ubs.mod3.sel)
