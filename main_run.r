@@ -2,13 +2,9 @@
 
 ## Main parameters
 scn.idx <- 1 ## the simulation scenario to load
-idx.tag <- 1 ## the simulation iterated to use
-run.type <- 'bootv2' ## for the CI estimate
+idx.tag <- 1 ## the simulation iterate to use
+run.type <- 'bootv2' ## variance estimation penalty method for the CI estimate (nonparametric bootstrap)
 
-#args = commandArgs(trailingOnly=TRUE)
-#scn.idx <- as.numeric(args[1])
-#run.type <- as.character(args[2])
-#idx.tag <- as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
 print(paste('Scenario:', scn.idx, 'Iterate:', idx.tag))
 
 library(nloptr)
@@ -19,46 +15,45 @@ library(gtools)
 options(width=120)
 
 ####################
-output.dir <- './'
-data.dir <- './'
+output.dir <- '.' #directory to save outputs
+data.dir <- '.' #directory to load data
 
-source('./data_gen.r') #data generation
-source('./var_est.r') ### variance est
-source('./point_est.r') ### point est
+source('./data_gen.r') #data generation functions
+source('./var_est.r') #variance est functions
+source('./point_est.r') #point est functions
 
 ####################
 ## Point Estimate ##
 
 ## Main parameters
-ver.run <- 'test'
+ver.run <- 'test' #id tag for the run
 
 ## Fitting parameters
-ct.cut.list <- c(20, 30, 50) ## the list of truncations to use
-quant.data.list <- c(0.01, 0.05, 0.10, 0.20, 0.35, 0.75, 1.0) ## the list of proportion of reads to use
-quant.curve.list <- c(0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30) ## the list of proportion of the acc. curve to sue
-max.obs <- 1000
-reg.prm <- 0.00 #(1 percent)
-boot.point.type <- 'multi' ## bootstrap for the point estimate (if used)
+ct.cut.list <- c(20) ## the list of truncations to use
+quant.data.list <- c(1.0) ## the list of proportion of reads to use
+quant.curve.list <- c(0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30) ## the list of proportion of the acc. curve to remove
+max.obs <- 1000 #maximum number of observations to use when fitting ARC curve
+boot.point.type <- 'multi' ## bootstrap for the point estimate empirical distribution (if used)
 
 ## ci est and bootstrap prms
 n.split <- 1500 # number of bootstrap iterates
 n.quant <- 10 #number of quantiles to use for splitting the bootstrap
 
-cov.use.idx <- 4 #the covariance estimate to use (bootstrap) - alternatively #6 (avg. over bts. quants)
+cov.use.idx <- 4 #the covariance estimate to use (bootstrap); 1 = no regularization; 2 = minimum regularization; 4 = bootstrap
 n.ci.sim <- 2000 #no. of ci simulations
 
 ## for the robustness checks
-perc.var.list <- c(0.0, 0.5, 1.0)
-reg.type <- 'log'; use.wts <- TRUE
+perc.var.list <- c(0.0, 0.5, 1.0) #bias adjustment proportions
+reg.type <- 'log'; use.wts <- TRUE #type of relation between ratios; the weigh the observations y_k
 
 ## placeholder parameters
-quant.data.idx <- length(quant.data.list)
+quant.data.idx <- length(quant.data.list) #use all of the data
 quant.curve.idx <- 1
 ct.cut.idx <- 1
 
-quant.data <- quant.data.list[quant.data.idx]
-quant.curve <- quant.curve.list[quant.curve.idx]
-ct.cut <- ct.cut.list[ct.cut.idx]
+quant.data <- quant.data.list[quant.data.idx] #use all the data
+quant.curve <- quant.curve.list[quant.curve.idx] #use all of the curve
+ct.cut <- ct.cut.list[ct.cut.idx] #use the first count cutoff
 
 # Step 1: Load the Data
 if (scn.idx %in% c(1:43)) {
@@ -77,11 +72,9 @@ if (scn.idx %in% c(1:43)) {
 	obs.dat <- ldat.ex[idx.tag,]; orig.rates <- NA
 	obs.dat.proc <- proc.input.data(obs.dat, quant.data, ct.cut)
 }
-# Step 2: Specify a particular dataset to use
-#t.st <- Sys.time()
+# Step 2: Generate a Point Estimate
 curve.pt.est <- est.curves.spc(obs.dat.proc, quant.curve.list, max.obs=max.obs)
 curve.point.est <- apply(curve.pt.est$res, 2, mean)
-#Sys.time() - t.st
 
 ###################################
 ## Estimate the confidence interval
@@ -142,10 +135,8 @@ sample.filt.fn <- paste0(output.dir, '/sample_var_est_results_run_', scn.idx, '_
 #save(list=c('res.out', 'cov.est.store', 'cov.true.store', 'cts.est.store', 'cts.true.store', 'opt.pen.idx'), file=sample.filt.fn)
 
 #stop('')
-est.cov.mat <- cov.est.store[,,cov.use.idx]
-est.cts.mat <- cts.est.store[,cov.use.idx]
-
-
+est.cov.mat <- cov.est.store[,,cov.use.idx] #covariance matrix
+est.cts.mat <- cts.est.store[,cov.use.idx] #count matrix
 
 ###############################################################
 ### the ci estimate
@@ -164,7 +155,7 @@ int.boot.loop <- function(boot.idx, boot.dat.train, boot.dat.test, perc.var.list
 	return(list(estres=res.out.arr))
 }
 
-ci.res.fn <- paste0(output.dir, '/ci_results_df_sample_run_scn_', scn.idx, '_iter', idx.tag, '_run', run.type, '_ct', ct.cut, '_nsplit', n.ci.sim, '_reg', reg.prm, '_cov', cov.use.idx, '_v', ver.run, '.RData')
+ci.res.fn <- paste0(output.dir, '/ci_results_df_sample_run_scn_', scn.idx, '_iter', idx.tag, '_run', run.type, '_ct', ct.cut, '_nsplit', n.ci.sim, '_cov', cov.use.idx, '_v', ver.run, '.RData')
 
 if (file.exists(ci.res.fn)) {
 	load(ci.res.fn)
@@ -184,7 +175,7 @@ if (file.exists(ci.res.fn)) {
 		res.out.arr <- r.boot[[boot.idx]]$estres
 		est.av.st[,,boot.idx] <- sapply(res.out.arr[which(perc.var.list == 0),], function(x){x*(1-perc.var.list)}) + sapply(res.out.arr[which(perc.var.list == 1),], function(x){x*perc.var.list})
 	}
-	#save(list=c('est.st', 'est.av.st', 'ci.pos.sim', 'quant.data', 'ct.cut', 'quant.curve.list', 'curve.pt.est', 'curve.point.est', 'reg.prm', 'reg.type', 'use.wts', 'perc.var.list'), file=ci.res.fn)
+	#save(list=c('est.st', 'est.av.st', 'ci.pos.sim', 'quant.data', 'ct.cut', 'quant.curve.list', 'curve.pt.est', 'curve.point.est', 'reg.type', 'use.wts', 'perc.var.list'), file=ci.res.fn)
 }
 
 
