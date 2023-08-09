@@ -61,15 +61,15 @@ if (scn.idx %in% c(1:43)) {
 	load(sim.dat.fn)
 	obs.dat <- rand.dat.storage[,idx.tag]; orig.rates <- unlist(rand.rate.storage[[idx.tag]]$dat)
 	obs.dat.proc <- proc.input.data(obs.dat, quant.data, ct.cut)
+} else if (scn.idx == 1005) {
+	sim.dat.fn <- paste0(data.dir, '/wagner_tree_microbiome_cleaned_example_1.RData')
+	load(sim.dat.fn)
+	obs.dat <- otu.table[idx.tag,]; orig.rates <- NA
+	obs.dat.proc <- proc.input.data(obs.dat, quant.data, ct.cut)
 } else if (scn.idx == 1011) {
 	sim.dat.fn <- paste0(data.dir, '/steam_catalogue_cleaned_example_2.RData')
 	load(sim.dat.fn)
 	obs.dat <- vect.list[[idx.tag]]; orig.rates <- NA
-	obs.dat.proc <- proc.input.data(obs.dat, quant.data, ct.cut)
-} else if (scn.idx == 1005) {
-	sim.dat.fn <- paste0(data.dir, '/wagner_tree_microbiome_cleaned_example_1.RData')
-	load(sim.dat.fn)
-	obs.dat <- ldat.ex[idx.tag,]; orig.rates <- NA
 	obs.dat.proc <- proc.input.data(obs.dat, quant.data, ct.cut)
 }
 # Step 2: Generate a Point Estimate
